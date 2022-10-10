@@ -1,0 +1,65 @@
+-Query to not insert duplicate data, not works in python but works in sqldb
+
+insert into att_terminal_zone(terminal_id , zone_id)
+SELECT DISTINCT att_terminal_zone.terminal_id, att_employee_zone.zone_id FROM  
+att_employee_zone
+LEFT JOIN att_terminal_zone
+USING(zone_id)
+EXCEPT
+SELECT terminal_id , zone_id FROM att_terminal_zone;
+
+--make table duplicate proof--
+CREATE UNIQUE INDEX att_punches_index ON att_punches(employee_id, punch_time, workstate, verifycode, terminal_id);
+
+
+--sql in-out-index---
+CREATE UNIQUE INDEX att_day_details_index ON att_day_details(employee_id,att_date,checkin,checkout);
+
+CREATE UNIQUE INDEX att_day_details_out_index ON att_day_details(employee_id,att_date,checkout);
+
+CREATE UNIQUE INDEX att_day_details_in_index ON att_day_details(employee_id,att_date,checkin);
+
+
+---sql-time-table-index--
+CREATE UNIQUE INDEX att_timetable_index ON att_timetable(timetable_name , 
+substr(timetable_start,12), substr(timetable_end,12),
+timetable_latecome , timetable_earlyout);
+
+---sql-employee-id-shift-index---
+CREATE UNIQUE INDEX att_employee_shift_index ON att_employee_shift(startDate,employee_id,shift_id);
+
+
+
+SELECT att_timetable.id , att_timetable.timetable_name , att_timetable.timetable_color, 
+substr(att_timetable.timetable_start,12) as 'Start Time' , substr(att_timetable.timetable_end,12) as 'End Time' ,
+att_timetable.timetable_latecome , att_timetable.timetable_earlyout from att_timetable
+
+---sql QUERY__
+SELECT DISTINCT att_punches.employee_id,
+    hr_employee.emp_firstname ||" "|| hr_employee.emp_lastname AS name , hr_department.dept_name,
+    att_punches.punch_time, 
+    substr(att_timetable.timetable_start,12) As start, substr(att_timetable.timetable_end,12) AS end , att_employee_shift.shift_id
+    FROM att_punches 
+    INNER JOIN att_employee_shift 
+    ON att_employee_shift.employee_id = att_punches.employee_id AND (att_punches.punch_time >= att_employee_shift.startDate
+	AND att_punches.punch_time <= att_employee_shift.endDate)
+    INNER JOIN att_shift_details
+    USING(shift_id)
+    INNER JOIN att_timetable
+    ON att_shift_details.timetable_id = att_timetable.id
+    INNER JOIN hr_employee
+    ON att_punches.employee_id = hr_employee.id
+	INNER JOIN hr_department 
+	ON hr_employee.department_id = hr_department.id
+    WHERE att_punches.punch_time  >= '{date1}' AND att_punches.punch_time  <= '{date2}+1'
+    ORDER BY att_punches.employee_id 
+
+-----sql ---
+SELECT DISTINCT substr(att_timetable.timetable_start,12) from att_employee_shift
+LEFT JOIN att_shift_details
+ON att_employee_shift.shift_id = att_shift_details.shift_id
+INNER JOIN att_timetable
+ON att_shift_details.timetable_id = att_timetable.id
+where att_employee_shift.employee_id = 4
+ORDER BY att_employee_shift.id DESC
+LIMIT 1
